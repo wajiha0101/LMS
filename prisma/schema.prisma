@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING // instructor awaiting admin approval
+}
+
+enum CourseStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum MaterialType {
+  VIDEO
+  PDF
+  SLIDES
+  QUIZ
+  ASSIGNMENT
+  RESOURCE
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum NotificationType {
+  NEW_CONTENT
+  DEADLINE
+  ANNOUNCEMENT
+  ENROLLMENT
+  GRADE
+  COURSE_APPROVAL
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  avatarUrl    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  instructorProfile InstructorProfile?
+  coursesCreated    Course[]                @relation("InstructorCourses")
+  enrollments       Enrollment[]
+  cartItems         CartItem[]
+  payments          Payment[]
+  reviews           Review[]
+  wishlist          Wishlist[]
+  notifications     Notification[]
+  quizAttempts      QuizAttempt[]
+  assignmentSubmits AssignmentSubmission[]
+  lessonProgress    LessonProgress[]
+  certificates      Certificate[]
+  forumPosts        ForumPost[]
+  announcements     Announcement[]          @relation("InstructorAnnouncements")
+  approvalsGiven    CourseApproval[]        @relation("AdminApprovals")
+  payouts           Payout[]
+}
+
+model InstructorProfile {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id])
+  bio         String?
+  expertise   String?
+  credentials String?
+}
+
+model Category {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  courses Course[]
+}
+
+model Course {
+  id           String       @id @default(uuid())
+  instructorId String
+  instructor   User         @relation("InstructorCourses", fields: [instructorId], references: [id])
+  title        String
+  description  String
+  price        Decimal      @db.Decimal(10, 2)
+  categoryId   String
+  category     Category     @relation(fields: [categoryId], references: [id])
+  level        CourseLevel
+  thumbnailUrl String?
+  status       CourseStatus @default(DRAFT)
+  version      Int          @default(1)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  materials     Material[]
+  enrollments   Enrollment[]
+  cartItems     CartItem[]
+  payments      Payment[]
+  reviews       Review[]
+  wishlist      Wishlist[]
+  approvals     CourseApproval[]
+  forumThreads  ForumThread[]
+  announcements Announcement[]
+  certificates  Certificate[]
+}
+
+model Material {
+  id         String       @id @default(uuid())
+  courseId   String
+  course     Course       @relation(fields: [courseId], references: [id])
+  type       MaterialType
+  title      String
+  contentUrl String?
+  position   Int
+  duration   Int?         // seconds, for video
+  createdAt  DateTime     @default(now())
+
+  quiz           Quiz?
+  assignment     Assignment?
+  lessonProgress LessonProgress[]
+}
+
+model Quiz {
+  id         String   @id @default(uuid())
+  materialId String   @unique
+  material   Material @relation(fields: [materialId], references: [id])
+  title      String
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id            String @id @default(uuid())
+  quizId        String
+  quiz          Quiz   @relation(fields: [quizId], references: [id])
+  questionText  String
+  options       Json
+  correctAnswer String
+  position      Int
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id])
+  answers     Json
+  score       Decimal  @db.Decimal(5, 2)
+  submittedAt DateTime @default(now())
+}
+
+model Assignment {
+  id          String    @id @default(uuid())
+  materialId  String    @unique
+  material    Material  @relation(fields: [materialId], references: [id])
+  title       String
+  description String
+  dueDate     DateTime?
+
+  submissions AssignmentSubmission[]
+}
+
+model AssignmentSubmission {
+  id           String     @id @default(uuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  studentId    String
+  student      User       @relation(fields: [studentId], references: [id])
+  fileUrl      String
+  grade        Decimal?   @db.Decimal(5, 2)
+  feedback     String?
+  submittedAt  DateTime   @default(now())
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  addedAt   DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  studentId             String
+  student               User          @relation(fields: [studentId], references: [id])
+  courseId              String
+  course                Course        @relation(fields: [courseId], references: [id])
+  amount                Decimal       @db.Decimal(10, 2)
+  commissionAmount      Decimal       @db.Decimal(10, 2)
+  currency              String        @default("usd")
+  stripePaymentIntentId String        @unique
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+}
+
+model Enrollment {
+  id              String           @id @default(uuid())
+  studentId       String
+  student         User             @relation(fields: [studentId], references: [id])
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id])
+  status          EnrollmentStatus @default(ACTIVE)
+  progressPercent Decimal          @default(0) @db.Decimal(5, 2)
+  enrolledAt      DateTime         @default(now())
+  completedAt     DateTime?
+
+  @@unique([studentId, courseId])
+}
+
+model LessonProgress {
+  id             String    @id @default(uuid())
+  studentId      String
+  student        User      @relation(fields: [studentId], references: [id])
+  materialId     String
+  material       Material  @relation(fields: [materialId], references: [id])
+  completed      Boolean   @default(false)
+  resumePosition Int       @default(0) // seconds, for video resume
+  completedAt    DateTime?
+
+  @@unique([studentId, materialId])
+}
+
+model Certificate {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        User     @relation(fields: [studentId], references: [id])
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id])
+  certificateUrl String
+  issuedAt       DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  addedAt   DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  message   String
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+}
+
+model Announcement {
+  id           String   @id @default(uuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+  instructorId String
+  instructor   User     @relation("InstructorAnnouncements", fields: [instructorId], references: [id])
+  title        String
+  message      String
+  createdAt    DateTime @default(now())
+}
+
+model ForumThread {
+  id        String   @id @default(uuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  title     String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  posts ForumPost[]
+}
+
+model ForumPost {
+  id        String      @id @default(uuid())
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id])
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  message   String
+  createdAt DateTime    @default(now())
+}
+
+model CourseApproval {
+  id        String   @id @default(uuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  adminId   String
+  admin     User     @relation("AdminApprovals", fields: [adminId], references: [id])
+  action    String   // APPROVED | REJECTED
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id               String       @id @default(uuid())
+  instructorId     String
+  instructor       User         @relation(fields: [instructorId], references: [id])
+  amount           Decimal      @db.Decimal(10, 2)
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           PayoutStatus @default(PENDING)
+  stripeTransferId String?
+  createdAt        DateTime     @default(now())
+}
