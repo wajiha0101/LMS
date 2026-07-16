@@ -1,76 +1,62 @@
-const { SendSuccess } = require("../../utils/ApiResponse");
-const { AppError } = require("../../utils/AppError");
-const { GetRefreshCookieMaxAgeMs } = require("../../lib/jwt");
-const { RegisterUser, LoginUser, RefreshSession, GetCurrentUser } = require("./auth.service");
+const { sendSuccess } = require("../../utils/ApiResponse");
+const { getRefreshCookieMaxAgeMs } = require("../../lib/jwt");
+const { registerUser, loginUser, refreshSession } = require("./auth.service");
 
-const RefreshCookieName = "refreshToken";
-const RefreshCookiePath = "/api/v1/auth";
+const refreshCookieName = "refreshToken";
+const refreshCookiePath = "/api/v1/auth";
 
-function GetRefreshCookieOptions() {
+function getRefreshCookieOptions() {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: RefreshCookiePath,
-    maxAge: GetRefreshCookieMaxAgeMs(),
+    path: refreshCookiePath,
+    maxAge: getRefreshCookieMaxAgeMs(),
   };
 }
 
-async function RegisterController(req, res, next) {
+async function registerController(req, res, next) {
   try {
-    const CreatedUser = await RegisterUser(req.body);
-    SendSuccess(res, CreatedUser, 201);
-  } catch (Error) {
-    next(Error);
+    const createdUser = await registerUser(req.body);
+    sendSuccess(res, createdUser, 201);
+  } catch (error) {
+    next(error);
   }
 }
 
-async function LoginController(req, res, next) {
+async function loginController(req, res, next) {
   try {
-    const Result = await LoginUser(req.body);
-    res.cookie(RefreshCookieName, Result.RefreshToken, GetRefreshCookieOptions());
-    SendSuccess(res, { User: Result.User, AccessToken: Result.AccessToken });
-  } catch (Error) {
-    next(Error);
+    const result = await loginUser(req.body);
+    res.cookie(refreshCookieName, result.refreshToken, getRefreshCookieOptions());
+    sendSuccess(res, { user: result.user, accessToken: result.accessToken });
+  } catch (error) {
+    next(error);
   }
 }
 
-async function RefreshController(req, res, next) {
+async function refreshController(req, res, next) {
   try {
-    const IncomingRefreshToken = req.cookies?.[RefreshCookieName];
-    const Result = await RefreshSession(IncomingRefreshToken);
-    res.cookie(RefreshCookieName, Result.RefreshToken, GetRefreshCookieOptions());
-    SendSuccess(res, { User: Result.User, AccessToken: Result.AccessToken });
-  } catch (Error) {
-    next(Error);
+    const incomingRefreshToken = req.cookies?.[refreshCookieName];
+    const result = await refreshSession(incomingRefreshToken);
+    res.cookie(refreshCookieName, result.refreshToken, getRefreshCookieOptions());
+    sendSuccess(res, { user: result.user, accessToken: result.accessToken });
+  } catch (error) {
+    next(error);
   }
 }
 
-async function LogoutController(_req, res, next) {
+async function logoutController(_req, res, next) {
   try {
-    res.clearCookie(RefreshCookieName, { path: RefreshCookiePath });
-    SendSuccess(res, { Message: "Logged out successfully" });
-  } catch (Error) {
-    next(Error);
-  }
-}
-
-async function MeController(req, res, next) {
-  try {
-    if (!req.user) {
-      throw AppError.Unauthorized();
-    }
-    const CurrentUser = await GetCurrentUser(req.user.Id);
-    SendSuccess(res, CurrentUser);
-  } catch (Error) {
-    next(Error);
+    res.clearCookie(refreshCookieName, { path: refreshCookiePath });
+    sendSuccess(res, { message: "Logged out successfully" });
+  } catch (error) {
+    next(error);
   }
 }
 
 module.exports = {
-  RegisterController,
-  LoginController,
-  RefreshController,
-  LogoutController,
-  MeController,
+  registerController,
+  loginController,
+  refreshController,
+  logoutController,
 };

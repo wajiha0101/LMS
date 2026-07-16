@@ -1,24 +1,24 @@
 const { ZodError } = require("zod");
 const { AppError } = require("../utils/AppError");
 
-function Validate(Schema, Source = "body") {
-  return function ValidateMiddleware(req, _res, next) {
+function validate(schema, source = "body") {
+  return function validateMiddleware(req, _res, next) {
     try {
-      const Parsed = Schema.parse(req[Source]);
-      req[Source] = Parsed;
+      const parsed = schema.parse(req[source]);
+      req[source] = parsed;
       next();
-    } catch (Error) {
-      if (Error instanceof ZodError) {
-        const Details = Error.errors.map((Issue) => ({
-          Path: Issue.path.join("."),
-          Message: Issue.message,
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const details = error.errors.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
         }));
-        next(AppError.BadRequest("Validation failed", Details));
+        next(AppError.BadRequest("Validation failed", details));
         return;
       }
-      next(Error);
+      next(error);
     }
   };
 }
 
-module.exports = { Validate };
+module.exports = { validate };

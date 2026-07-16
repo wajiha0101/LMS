@@ -1,65 +1,65 @@
 const jwt = require("jsonwebtoken");
 
-function GetAccessSecret() {
-  const Secret = process.env.JWT_ACCESS_SECRET;
-  if (!Secret) {
+function getAccessSecret() {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) {
     throw new Error("JWT_ACCESS_SECRET is not set");
   }
-  return Secret;
+  return secret;
 }
 
-function GetRefreshSecret() {
-  const Secret = process.env.JWT_REFRESH_SECRET;
-  if (!Secret) {
+function getRefreshSecret() {
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (!secret) {
     throw new Error("JWT_REFRESH_SECRET is not set");
   }
-  return Secret;
+  return secret;
 }
 
-function SignAccessToken(Payload) {
-  return jwt.sign(Payload, GetAccessSecret(), {
+function signAccessToken(payload) {
+  return jwt.sign(payload, getAccessSecret(), {
     expiresIn: process.env.JWT_ACCESS_EXPIRY ?? "15m",
   });
 }
 
-function SignRefreshToken(Payload) {
-  return jwt.sign(Payload, GetRefreshSecret(), {
+function signRefreshToken(payload) {
+  return jwt.sign(payload, getRefreshSecret(), {
     expiresIn: process.env.JWT_REFRESH_EXPIRY ?? "7d",
   });
 }
 
-function VerifyAccessToken(Token) {
-  return jwt.verify(Token, GetAccessSecret());
+function verifyAccessToken(token) {
+  return jwt.verify(token, getAccessSecret());
 }
 
-function VerifyRefreshToken(Token) {
-  return jwt.verify(Token, GetRefreshSecret());
+function verifyRefreshToken(token) {
+  return jwt.verify(token, getRefreshSecret());
 }
 
-function GetRefreshCookieMaxAgeMs() {
-  const Expiry = process.env.JWT_REFRESH_EXPIRY ?? "7d";
-  const Match = Expiry.match(/^(\d+)([smhd])$/);
+function getRefreshCookieMaxAgeMs() {
+  const expiry = process.env.JWT_REFRESH_EXPIRY ?? "7d";
+  const match = expiry.match(/^(\d+)([smhd])$/);
 
-  if (!Match) {
+  if (!match) {
     return 7 * 24 * 60 * 60 * 1000;
   }
 
-  const Value = parseInt(Match[1], 10);
-  const Unit = Match[2];
-  const UnitMs = {
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  const unitMs = {
     s: 1000,
     m: 60 * 1000,
     h: 60 * 60 * 1000,
     d: 24 * 60 * 60 * 1000,
   };
 
-  return Value * UnitMs[Unit];
+  return value * unitMs[unit];
 }
 
 module.exports = {
-  SignAccessToken,
-  SignRefreshToken,
-  VerifyAccessToken,
-  VerifyRefreshToken,
-  GetRefreshCookieMaxAgeMs,
+  signAccessToken,
+  signRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+  getRefreshCookieMaxAgeMs,
 };

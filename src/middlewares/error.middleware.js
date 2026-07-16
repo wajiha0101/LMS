@@ -1,33 +1,33 @@
 const { Prisma: PrismaNamespace } = require("@prisma/client");
 const { AppError } = require("../utils/AppError");
 
-function ErrorMiddleware(Error, _req, res, _next) {
-  if (Error instanceof AppError) {
-    res.status(Error.StatusCode).json({
+function errorMiddleware(error, _req, res, _next) {
+  if (error instanceof AppError) {
+    res.status(error.StatusCode).json({
       success: false,
       error: {
-        code: Error.Code,
-        message: Error.message,
-        details: Error.Details ?? [],
+        code: error.Code,
+        message: error.message,
+        details: error.Details ?? [],
       },
     });
     return;
   }
 
-  if (Error instanceof PrismaNamespace.PrismaClientKnownRequestError) {
-    if (Error.code === "P2002") {
+  if (error instanceof PrismaNamespace.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
       res.status(409).json({
         success: false,
         error: {
           code: "CONFLICT",
           message: "A record with this value already exists",
-          details: Error.meta ?? [],
+          details: error.meta ?? [],
         },
       });
       return;
     }
 
-    if (Error.code === "P2025") {
+    if (error.code === "P2025") {
       res.status(404).json({
         success: false,
         error: {
@@ -40,7 +40,7 @@ function ErrorMiddleware(Error, _req, res, _next) {
     }
   }
 
-  console.error(Error);
+  console.error(error);
 
   res.status(500).json({
     success: false,
@@ -52,4 +52,4 @@ function ErrorMiddleware(Error, _req, res, _next) {
   });
 }
 
-module.exports = { ErrorMiddleware };
+module.exports = { errorMiddleware };

@@ -1,33 +1,33 @@
 class AppError extends Error {
-  constructor(Code, Message, StatusCode, Details) {
-    super(Message);
-    this.Code = Code;
-    this.StatusCode = StatusCode;
-    this.Details = Details;
+  constructor(code, message, statusCode, details) {
+    super(message);
+    this.Code = code;
+    this.StatusCode = statusCode;
+    this.Details = details;
   }
 
-  static BadRequest(Message, Details) {
-    return new AppError("VALIDATION_ERROR", Message, 400, Details);
+  static BadRequest(message, details) {
+    return new AppError("VALIDATION_ERROR", message, 400, details);
   }
 
-  static Unauthorized(Message = "Authentication required") {
-    return new AppError("UNAUTHORIZED", Message, 401);
+  static Unauthorized(message = "Authentication required") {
+    return new AppError("UNAUTHORIZED", message, 401);
   }
 
-  static Forbidden(Message = "You do not have permission to perform this action") {
-    return new AppError("FORBIDDEN", Message, 403);
+  static Forbidden(message = "You do not have permission to perform this action") {
+    return new AppError("FORBIDDEN", message, 403);
   }
 
-  static NotFound(Message = "Resource not found") {
-    return new AppError("NOT_FOUND", Message, 404);
+  static NotFound(message = "Resource not found") {
+    return new AppError("NOT_FOUND", message, 404);
   }
 
-  static Conflict(Message) {
-    return new AppError("CONFLICT", Message, 409);
+  static Conflict(message) {
+    return new AppError("CONFLICT", message, 409);
   }
 
-  static Internal(Message = "Internal server error") {
-    return new AppError("INTERNAL_ERROR", Message, 500);
+  static Internal(message = "Internal server error") {
+    return new AppError("INTERNAL_ERROR", message, 500);
   }
 }
 

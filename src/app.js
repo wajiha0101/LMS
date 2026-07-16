@@ -2,32 +2,42 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const { ErrorMiddleware } = require("./middlewares/error.middleware");
+const { errorMiddleware } = require("./middlewares/error.middleware");
 const { AppError } = require("./utils/AppError");
-const AuthRouter = require("./modules/auth/auth.routes");
+const authRouter = require("./modules/auth/auth.routes");
+const usersRouter = require("./modules/users/users.routes");
+const coursesRouter = require("./modules/courses/courses.routes");
+const materialsRouter = require("./modules/materials/materials.routes");
+const quizzesRouter = require("./modules/quizzes/quizzes.routes");
+const assignmentsRouter = require("./modules/assignments/assignments.routes");
 
-const App = express();
+const app = express();
 
-App.use(helmet());
-App.use(
+app.use(helmet());
+app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,
   })
 );
-App.use(express.json());
-App.use(cookieParser());
+app.use(express.json());
+app.use(cookieParser());
 
-App.get("/health", (_req, res) => {
-  res.status(200).json({ success: true, data: { Status: "ok" } });
+app.get("/health", (_req, res) => {
+  res.status(200).json({ success: true, data: { status: "ok" } });
 });
 
-App.use("/api/v1/auth", AuthRouter);
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1", usersRouter);
+app.use("/api/v1", coursesRouter);
+app.use("/api/v1", materialsRouter);
+app.use("/api/v1", quizzesRouter);
+app.use("/api/v1", assignmentsRouter);
 
-App.use((_req, _res, next) => {
+app.use((_req, _res, next) => {
   next(AppError.NotFound("Route not found"));
 });
 
-App.use(ErrorMiddleware);
+app.use(errorMiddleware);
 
-module.exports = App;
+module.exports = app;

@@ -17,6 +17,7 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   PENDING // instructor awaiting admin approval
+  REJECTED // instructor application rejected by admin
 }
 
 enum CourseStatus {
@@ -132,16 +133,20 @@ model Course {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  materials     Material[]
-  enrollments   Enrollment[]
-  cartItems     CartItem[]
-  payments      Payment[]
-  reviews       Review[]
-  wishlist      Wishlist[]
-  approvals     CourseApproval[]
-  forumThreads  ForumThread[]
-  announcements Announcement[]
-  certificates  Certificate[]
+  materials         Material[]
+  enrollments       Enrollment[]
+  cartItems         CartItem[]
+  payments          Payment[]
+  reviews           Review[]
+  wishlist          Wishlist[]
+  approvals         CourseApproval[]
+  forumThreads      ForumThread[]
+  announcements     Announcement[]
+  certificates      Certificate[]
+  quiz              Quiz?
+  assignment        Assignment?
+  quizAttempts      QuizAttempt[]
+  assignmentSubmits AssignmentSubmission[]
 }
 
 model Material {
@@ -155,16 +160,14 @@ model Material {
   duration   Int?         // seconds, for video
   createdAt  DateTime     @default(now())
 
-  quiz           Quiz?
-  assignment     Assignment?
   lessonProgress LessonProgress[]
 }
 
 model Quiz {
-  id         String   @id @default(uuid())
-  materialId String   @unique
-  material   Material @relation(fields: [materialId], references: [id])
-  title      String
+  id       String @id @default(uuid())
+  courseId String @unique
+  course   Course @relation(fields: [courseId], references: [id])
+  title    String
 
   questions QuizQuestion[]
   attempts  QuizAttempt[]
@@ -184,17 +187,21 @@ model QuizAttempt {
   id          String   @id @default(uuid())
   quizId      String
   quiz        Quiz     @relation(fields: [quizId], references: [id])
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
   studentId   String
   student     User     @relation(fields: [studentId], references: [id])
-  answers     Json
   score       Decimal  @db.Decimal(5, 2)
+  totalMarks  Decimal  @db.Decimal(5, 2)
   submittedAt DateTime @default(now())
+
+  @@unique([studentId, quizId])
 }
 
 model Assignment {
   id          String    @id @default(uuid())
-  materialId  String    @unique
-  material    Material  @relation(fields: [materialId], references: [id])
+  courseId    String    @unique
+  course      Course    @relation(fields: [courseId], references: [id])
   title       String
   description String
   dueDate     DateTime?
@@ -206,12 +213,16 @@ model AssignmentSubmission {
   id           String     @id @default(uuid())
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id])
   studentId    String
   student      User       @relation(fields: [studentId], references: [id])
   fileUrl      String
   grade        Decimal?   @db.Decimal(5, 2)
   feedback     String?
   submittedAt  DateTime   @default(now())
+
+  @@unique([studentId, assignmentId])
 }
 
 model CartItem {

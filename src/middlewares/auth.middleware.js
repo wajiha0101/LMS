@@ -1,28 +1,28 @@
-const { VerifyAccessToken } = require("../lib/jwt");
+const { verifyAccessToken } = require("../lib/jwt");
 const { AppError } = require("../utils/AppError");
 
-function AuthMiddleware(req, _res, next) {
-  const Header = req.headers.authorization;
+function authMiddleware(req, _res, next) {
+  const header = req.headers.authorization;
 
-  if (!Header || !Header.startsWith("Bearer ")) {
+  if (!header || !header.startsWith("Bearer ")) {
     next(AppError.Unauthorized("Missing or malformed Authorization header"));
     return;
   }
 
-  const Token = Header.slice("Bearer ".length);
+  const token = header.slice("Bearer ".length);
 
   try {
-    const Payload = VerifyAccessToken(Token);
+    const payload = verifyAccessToken(token);
 
-    if (Payload.status === "SUSPENDED") {
+    if (payload.status === "SUSPENDED") {
       next(AppError.Forbidden("This account has been suspended"));
       return;
     }
 
     req.user = {
-      Id: Payload.sub,
-      Role: Payload.role,
-      Status: Payload.status,
+      id: payload.sub,
+      role: payload.role,
+      status: payload.status,
     };
     next();
   } catch {
@@ -30,4 +30,4 @@ function AuthMiddleware(req, _res, next) {
   }
 }
 
-module.exports = { AuthMiddleware };
+module.exports = { authMiddleware };

@@ -1,117 +1,107 @@
 const bcrypt = require("bcrypt");
-const { Prisma } = require("../../lib/prisma");
-const { SignAccessToken, SignRefreshToken, VerifyRefreshToken } = require("../../lib/jwt");
+const { prisma } = require("../../lib/prisma");
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../../lib/jwt");
 const { AppError } = require("../../utils/AppError");
 
-function SanitizeUser(User) {
+function sanitizeUser(user) {
   return {
-    Id: User.id,
-    Name: User.name,
-    Email: User.email,
-    Role: User.role,
-    Status: User.status,
-    AvatarUrl: User.avatarUrl,
-    CreatedAt: User.createdAt,
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    avatarUrl: user.avatarUrl,
+    createdAt: user.createdAt,
   };
 }
 
-function GetSaltRounds() {
-  const Rounds = parseInt(process.env.BCRYPT_SALT_ROUNDS ?? "12", 10);
-  return Number.isNaN(Rounds) ? 12 : Rounds;
+function getSaltRounds() {
+  const rounds = parseInt(process.env.BCRYPT_SALT_ROUNDS ?? "12", 10);
+  return Number.isNaN(rounds) ? 12 : rounds;
 }
 
-async function RegisterUser(Input) {
-  const ExistingUser = await Prisma.user.findUnique({ where: { email: Input.email } });
+async function registerUser(input) {
+  const existingUser = await prisma.user.findUnique({ where: { email: input.email } });
 
-  if (ExistingUser) {
+  if (existingUser) {
     throw AppError.Conflict("An account with this email already exists");
   }
 
-  const PasswordHash = await bcrypt.hash(Input.password, GetSaltRounds());
+  const passwordHash = await bcrypt.hash(input.password, getSaltRounds());
 
-  const CreatedUser = await Prisma.user.create({
+  const createdUser = await prisma.user.create({
     data: {
-      name: Input.name,
-      email: Input.email,
-      passwordHash: PasswordHash,
-      role: Input.role,
-      status: Input.role === "INSTRUCTOR" ? "PENDING" : "ACTIVE",
-      ...(Input.role === "INSTRUCTOR" ? { instructorProfile: { create: {} } } : {}),
+      name: input.name,
+      email: input.email,
+      passwordHash: passwordHash,
+      role: input.role,
+      status: input.role === "INSTRUCTOR" ? "PENDING" : "ACTIVE",
+      ...(input.role === "INSTRUCTOR" ? { instructorProfile: { create: {} } } : {}),
     },
   });
 
-  return SanitizeUser(CreatedUser);
+  return sanitizeUser(createdUser);
 }
 
-async function LoginUser(Input) {
-  const User = await Prisma.user.findUnique({ where: { email: Input.email } });
+async function loginUser(input) {
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
 
-  if (!User) {
+  if (!user) {
     throw AppError.Unauthorized("Invalid email or password");
   }
 
-  if (User.status === "SUSPENDED") {
+  if (user.status === "SUSPENDED") {
     throw AppError.Forbidden("This account has been suspended");
   }
 
-  const PasswordMatches = await bcrypt.compare(Input.password, User.passwordHash);
+  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
 
-  if (!PasswordMatches) {
+  if (!passwordMatches) {
     throw AppError.Unauthorized("Invalid email or password");
   }
 
-  const TokenPayload = { sub: User.id, role: User.role, status: User.status };
-  const AccessToken = SignAccessToken(TokenPayload);
-  const RefreshToken = SignRefreshToken(TokenPayload);
+  const tokenPayload = { sub: user.id, role: user.role, status: user.status };
+  const accessToken = signAccessToken(tokenPayload);
+  const refreshToken = signRefreshToken(tokenPayload);
 
   return {
-    User: SanitizeUser(User),
-    AccessToken,
-    RefreshToken,
+    user: sanitizeUser(user),
+    accessToken,
+    refreshToken,
   };
 }
 
-async function RefreshSession(RefreshTokenCookie) {
-  if (!RefreshTokenCookie) {
+async function refreshSession(refreshTokenCookie) {
+  if (!refreshTokenCookie) {
     throw AppError.Unauthorized("Missing refresh token");
   }
 
-  let Payload;
+  let payload;
   try {
-    Payload = VerifyRefreshToken(RefreshTokenCookie);
+    payload = verifyRefreshToken(refreshTokenCookie);
   } catch {
     throw AppError.Unauthorized("Invalid or expired refresh token");
   }
 
-  const User = await Prisma.user.findUnique({ where: { id: Payload.sub } });
+  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
 
-  if (!User) {
+  if (!user) {
     throw AppError.Unauthorized("User no longer exists");
   }
 
-  if (User.status === "SUSPENDED") {
+  if (user.status === "SUSPENDED") {
     throw AppError.Forbidden("This account has been suspended");
   }
 
-  const TokenPayload = { sub: User.id, role: User.role, status: User.status };
-  const AccessToken = SignAccessToken(TokenPayload);
-  const NewRefreshToken = SignRefreshToken(TokenPayload);
+  const tokenPayload = { sub: user.id, role: user.role, status: user.status };
+  const accessToken = signAccessToken(tokenPayload);
+  const newRefreshToken = signRefreshToken(tokenPayload);
 
   return {
-    User: SanitizeUser(User),
-    AccessToken,
-    RefreshToken: NewRefreshToken,
+    user: sanitizeUser(user),
+    accessToken,
+    refreshToken: newRefreshToken,
   };
 }
 
-async function GetCurrentUser(UserId) {
-  const User = await Prisma.user.findUnique({ where: { id: UserId } });
-
-  if (!User) {
-    throw AppError.NotFound("User not found");
-  }
-
-  return SanitizeUser(User);
-}
-
-module.exports = { RegisterUser, LoginUser, RefreshSession, GetCurrentUser };
+module.exports = { registerUser, loginUser, refreshSession };

@@ -1,14 +1,14 @@
-function SendSuccess(res, Data, StatusCode = 200, Meta = undefined) {
-  const Envelope = {
+function sendSuccess(res, data, statusCode = 200, meta = undefined) {
+  const envelope = {
     success: true,
-    data: Data,
+    data: data,
   };
 
-  if (Meta) {
-    Envelope.meta = Meta;
+  if (meta) {
+    envelope.meta = meta;
   }
 
-  return res.status(StatusCode).json(Envelope);
+  return res.status(statusCode).json(envelope);
 }
 
-module.exports = { SendSuccess };
+module.exports = { sendSuccess };

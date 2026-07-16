@@ -1,9 +1,9 @@
 require("dotenv").config();
 
-const App = require("./app");
+const app = require("./app");
 
-const Port = parseInt(process.env.PORT ?? "4000", 10);
+const port = parseInt(process.env.PORT ?? "4000", 10);
 
-App.listen(Port, () => {
-  console.log(`LMS backend listening on port ${Port}`);
+app.listen(port, () => {
+  console.log(`LMS backend listening on port ${port}`);
 });
