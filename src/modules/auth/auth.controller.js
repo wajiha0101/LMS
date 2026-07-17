@@ -1,6 +1,12 @@
 const { sendSuccess } = require("../../utils/ApiResponse");
 const { getRefreshCookieMaxAgeMs } = require("../../lib/jwt");
-const { registerUser, loginUser, refreshSession } = require("./auth.service");
+const {
+  registerUser,
+  loginUser,
+  refreshSession,
+  forgotPassword,
+  resetPassword,
+} = require("./auth.service");
 
 const refreshCookieName = "refreshToken";
 const refreshCookiePath = "/api/v1/auth";
@@ -54,9 +60,31 @@ async function logoutController(_req, res, next) {
   }
 }
 
+async function forgotPasswordController(req, res, next) {
+  try {
+    await forgotPassword(req.body.email);
+    sendSuccess(res, {
+      message: "If an account exists for this email, a reset code has been sent",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function resetPasswordController(req, res, next) {
+  try {
+    await resetPassword(req.body.email, req.body.code, req.body.newPassword);
+    sendSuccess(res, { message: "Password reset successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   registerController,
   loginController,
   refreshController,
   logoutController,
+  forgotPasswordController,
+  resetPasswordController,
 };

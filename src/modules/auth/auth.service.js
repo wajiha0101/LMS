@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { prisma } = require("../../lib/prisma");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../../lib/jwt");
+const { sendPasswordResetEmail } = require("../../lib/resend");
 const { AppError } = require("../../utils/AppError");
 
 function sanitizeUser(user) {
@@ -104,4 +106,56 @@ async function refreshSession(refreshTokenCookie) {
   };
 }
 
-module.exports = { registerUser, loginUser, refreshSession };
+function generateResetCode() {
+  return crypto.randomInt(0, 1000000).toString().padStart(6, "0");
+}
+
+async function forgotPassword(email) {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (user) {
+    const code = generateResetCode();
+    const codeHash = await bcrypt.hash(code, getSaltRounds());
+    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken: codeHash, resetTokenExpiry: expiry },
+    });
+
+    await sendPasswordResetEmail(user.email, code);
+  }
+}
+
+async function resetPassword(email, code, newPassword) {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user || !user.resetToken || !user.resetTokenExpiry) {
+    throw AppError.BadRequest("Invalid or expired code");
+  }
+
+  if (user.resetTokenExpiry.getTime() < Date.now()) {
+    throw AppError.BadRequest("Invalid or expired code");
+  }
+
+  const codeMatches = await bcrypt.compare(code, user.resetToken);
+
+  if (!codeMatches) {
+    throw AppError.BadRequest("Invalid or expired code");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, getSaltRounds());
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, resetToken: null, resetTokenExpiry: null },
+  });
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+  refreshSession,
+  forgotPassword,
+  resetPassword,
+};

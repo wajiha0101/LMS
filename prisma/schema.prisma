@@ -81,6 +81,8 @@ model User {
   role         Role
   status       UserStatus @default(ACTIVE)
   avatarUrl    String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
