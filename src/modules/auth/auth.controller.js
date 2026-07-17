@@ -9,7 +9,7 @@ const {
 } = require("./auth.service");
 
 const refreshCookieName = "refreshToken";
-const refreshCookiePath = "/api/v1/auth";
+const refreshCookiePath = "/auth";
 
 function getRefreshCookieOptions() {
   return {

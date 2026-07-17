@@ -8,8 +8,7 @@ const authRouter = require("./modules/auth/auth.routes");
 const usersRouter = require("./modules/users/users.routes");
 const coursesRouter = require("./modules/courses/courses.routes");
 const materialsRouter = require("./modules/materials/materials.routes");
-const quizzesRouter = require("./modules/quizzes/quizzes.routes");
-const assignmentsRouter = require("./modules/assignments/assignments.routes");
+
 
 const app = express();
 
@@ -27,12 +26,12 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ success: true, data: { status: "ok" } });
 });
 
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1", usersRouter);
-app.use("/api/v1", coursesRouter);
-app.use("/api/v1", materialsRouter);
-app.use("/api/v1", quizzesRouter);
-app.use("/api/v1", assignmentsRouter);
+app.use("/auth", authRouter);
+app.use("/", usersRouter);
+app.use("/", coursesRouter);
+app.use("/", materialsRouter);
+app.use("/", quizzesRouter);
+app.use("/", assignmentsRouter);
 
 app.use((_req, _res, next) => {
   next(AppError.NotFound("Route not found"));
