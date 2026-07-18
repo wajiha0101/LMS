@@ -8,7 +8,11 @@ const authRouter = require("./modules/auth/auth.routes");
 const usersRouter = require("./modules/users/users.routes");
 const coursesRouter = require("./modules/courses/courses.routes");
 const materialsRouter = require("./modules/materials/materials.routes");
-
+const quizzesRouter = require("./modules/quizzes/quizzes.routes");
+const assignmentsRouter = require("./modules/assignments/assignments.routes");
+const reviewsRouter = require("./modules/reviews/reviews.routes");
+const certificatesRouter = require("./modules/certificates/certificates.routes");
+const payoutsRouter = require("./modules/payouts/payouts.routes");
 
 const app = express();
 
@@ -32,8 +36,12 @@ app.use("/", coursesRouter);
 app.use("/", materialsRouter);
 app.use("/", quizzesRouter);
 app.use("/", assignmentsRouter);
+app.use("/", reviewsRouter);
+app.use("/", certificatesRouter);
+app.use("/", payoutsRouter);
 
-app.use((_req, _res, next) => {
+app.use((req, _res, next) => {
+  console.log("UNMATCHED REQUEST:", req.method, req.originalUrl);
   next(AppError.NotFound("Route not found"));
 });
 

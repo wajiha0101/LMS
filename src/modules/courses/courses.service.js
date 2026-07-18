@@ -24,6 +24,57 @@ async function listCategories() {
   return categories;
 }
 
+async function createCategory(input) {
+  const existingCategory = await prisma.category.findUnique({ where: { name: input.name } });
+
+  if (existingCategory) {
+    throw AppError.Conflict("A category with this name already exists");
+  }
+
+  const createdCategory = await prisma.category.create({
+    data: { name: input.name },
+  });
+
+  return createdCategory;
+}
+
+async function updateCategory(categoryId, input) {
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+
+  if (!category) {
+    throw AppError.NotFound("Category not found");
+  }
+
+  const existingCategory = await prisma.category.findUnique({ where: { name: input.name } });
+
+  if (existingCategory && existingCategory.id !== categoryId) {
+    throw AppError.Conflict("A category with this name already exists");
+  }
+
+  const updatedCategory = await prisma.category.update({
+    where: { id: categoryId },
+    data: { name: input.name },
+  });
+
+  return updatedCategory;
+}
+
+async function deleteCategory(categoryId) {
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+
+  if (!category) {
+    throw AppError.NotFound("Category not found");
+  }
+
+  const coursesUsingCategory = await prisma.course.count({ where: { categoryId: categoryId } });
+
+  if (coursesUsingCategory > 0) {
+    throw AppError.Conflict("Cannot delete a category that has courses assigned to it");
+  }
+
+  await prisma.category.delete({ where: { id: categoryId } });
+}
+
 async function listCourses(query) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
@@ -78,13 +129,24 @@ async function listCourses(query) {
   };
 }
 
-async function getCourseById(courseId) {
+async function getCourseById(courseId, requestingUser) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: { category: true },
   });
 
   if (!course) {
+    throw AppError.NotFound("Course not found");
+  }
+
+  if (course.status === "PUBLISHED") {
+    return sanitizeCourse(course);
+  }
+
+  const isOwner = Boolean(requestingUser) && course.instructorId === requestingUser.id;
+  const isAdmin = Boolean(requestingUser) && requestingUser.role === "ADMIN";
+
+  if (!isOwner && !isAdmin) {
     throw AppError.NotFound("Course not found");
   }
 
@@ -176,7 +238,8 @@ async function getCourseStudents(courseId, instructorId) {
   });
 
   return enrollments.map((enrollment) => ({
-    studentId: enrollment.studentId,
+    id: enrollment.student.id,
+    studentId: enrollment.student.id,
     name: enrollment.student.name,
     email: enrollment.student.email,
     status: enrollment.status,
@@ -297,6 +360,9 @@ async function rejectCourse(courseId, adminId, notes) {
 
 module.exports = {
   listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   listCourses,
   getCourseById,
   createCourse,

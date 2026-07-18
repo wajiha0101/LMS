@@ -8,7 +8,7 @@ const {
 
 async function createMaterialController(req, res, next) {
   try {
-    const material = await createMaterial(req.params.id, req.user.id, req.body);
+    const material = await createMaterial(req.params.id, req.user.id, req.body, req.file);
     sendSuccess(res, material, 201);
   } catch (error) {
     next(error);
@@ -17,7 +17,7 @@ async function createMaterialController(req, res, next) {
 
 async function updateMaterialController(req, res, next) {
   try {
-    const material = await updateMaterial(req.params.id, req.user.id, req.body);
+    const material = await updateMaterial(req.params.id, req.user.id, req.body, req.file);
     sendSuccess(res, material);
   } catch (error) {
     next(error);

@@ -1,6 +1,9 @@
 const { sendSuccess } = require("../../utils/ApiResponse");
 const {
   listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   listCourses,
   getCourseById,
   createCourse,
@@ -22,6 +25,33 @@ async function listCategoriesController(_req, res, next) {
   }
 }
 
+async function createCategoryController(req, res, next) {
+  try {
+    const category = await createCategory(req.body);
+    sendSuccess(res, category, 201);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateCategoryController(req, res, next) {
+  try {
+    const category = await updateCategory(req.params.id, req.body);
+    sendSuccess(res, category);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function deleteCategoryController(req, res, next) {
+  try {
+    await deleteCategory(req.params.id);
+    sendSuccess(res, { message: "Category deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function listCoursesController(req, res, next) {
   try {
     const result = await listCourses(req.query);
@@ -33,7 +63,7 @@ async function listCoursesController(req, res, next) {
 
 async function getCourseByIdController(req, res, next) {
   try {
-    const course = await getCourseById(req.params.id);
+    const course = await getCourseById(req.params.id, req.user);
     sendSuccess(res, course);
   } catch (error) {
     next(error);
@@ -114,6 +144,9 @@ async function rejectCourseController(req, res, next) {
 
 module.exports = {
   listCategoriesController,
+  createCategoryController,
+  updateCategoryController,
+  deleteCategoryController,
   listCoursesController,
   getCourseByIdController,
   createCourseController,

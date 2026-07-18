@@ -8,6 +8,7 @@ const {listInstructorsController,approveInstructorController,rejectInstructorCon
   suspendStudentController,
   removeStudentController,
   getInstructorPublicProfileController,
+  getUserByIdController,
   updateOwnInstructorProfileController,
 } = require("./users.controller");
 
@@ -36,6 +37,7 @@ adminUsersRouter.delete("/admin/students/:id",authMiddleware,requireRole("ADMIN"
 );
 
 adminUsersRouter.get("/instructors/:id", getInstructorPublicProfileController);
+adminUsersRouter.get("/users/:id", authMiddleware, getUserByIdController);
 adminUsersRouter.patch("/instructors/me/profile",authMiddleware,requireRole("INSTRUCTOR"),
   validate(updateProfileSchema),
   updateOwnInstructorProfileController

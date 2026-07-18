@@ -41,9 +41,20 @@ const adminCoursesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
+const createCategorySchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+});
+
+const updateCategorySchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+});
+
 module.exports = {
   createCourseSchema,
   updateCourseSchema,
   listCoursesQuerySchema,
   adminCoursesQuerySchema,
+  createCategorySchema,
+  updateCategorySchema,
 };
+

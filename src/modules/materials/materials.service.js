@@ -1,4 +1,5 @@
 const { prisma } = require("../../lib/prisma");
+const { uploadBuffer } = require("../../lib/cloudinary");
 const { AppError } = require("../../utils/AppError");
 
 function sanitizeMaterial(material) {
@@ -37,7 +38,13 @@ async function getOwnedCourseOrFail(courseId, instructorId) {
   return course;
 }
 
-async function createMaterial(courseId, instructorId, input) {
+async function uploadMaterialFile(file, materialType) {
+  const resourceType = materialType === "VIDEO" ? "video" : "raw";
+  const result = await uploadBuffer(file.buffer, { resource_type: resourceType });
+  return result.secure_url;
+}
+
+async function createMaterial(courseId, instructorId, input, file) {
   await getOwnedCourseOrFail(courseId, instructorId);
 
   let position = input.position;
@@ -49,12 +56,17 @@ async function createMaterial(courseId, instructorId, input) {
     position = lastMaterial ? lastMaterial.position + 1 : 0;
   }
 
+  let contentUrl = input.contentUrl;
+  if (file) {
+    contentUrl = await uploadMaterialFile(file, input.type);
+  }
+
   const createdMaterial = await prisma.material.create({
     data: {
       courseId: courseId,
       type: input.type,
       title: input.title,
-      contentUrl: input.contentUrl,
+      contentUrl: contentUrl,
       duration: input.duration,
       position: position,
     },
@@ -63,7 +75,7 @@ async function createMaterial(courseId, instructorId, input) {
   return sanitizeMaterial(createdMaterial);
 }
 
-async function updateMaterial(materialId, instructorId, input) {
+async function updateMaterial(materialId, instructorId, input, file) {
   const material = await prisma.material.findUnique({ where: { id: materialId } });
 
   if (!material) {
@@ -72,9 +84,14 @@ async function updateMaterial(materialId, instructorId, input) {
 
   await getOwnedCourseOrFail(material.courseId, instructorId);
 
+  let contentUrl = input.contentUrl;
+  if (file) {
+    contentUrl = await uploadMaterialFile(file, input.type ?? material.type);
+  }
+
   const updatedMaterial = await prisma.material.update({
     where: { id: materialId },
-    data: input,
+    data: { ...input, contentUrl: contentUrl },
   });
 
   return sanitizeMaterial(updatedMaterial);

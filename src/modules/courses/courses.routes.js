@@ -1,10 +1,12 @@
 const { Router } = require("express");
-const { authMiddleware } = require("../../middlewares/auth.middleware");
+const { authMiddleware, optionalAuthMiddleware } = require("../../middlewares/auth.middleware");
 const { requireRole } = require("../../middlewares/rbac.middleware");
 const { validate } = require("../../middlewares/validate.middleware");
 const {createCourseSchema,updateCourseSchema,listCoursesQuerySchema,adminCoursesQuerySchema,
+  createCategorySchema,
+  updateCategorySchema,
 } = require("./courses.schema");
-const {listCategoriesController,listCoursesController,getCourseByIdController,createCourseController,updateCourseController,
+const {listCategoriesController,createCategoryController,updateCategoryController,deleteCategoryController,listCoursesController,getCourseByIdController,createCourseController,updateCourseController,
   deleteCourseController,
   getCourseStudentsController,
   submitCourseForApprovalController,
@@ -16,6 +18,15 @@ const {listCategoriesController,listCoursesController,getCourseByIdController,cr
 const coursesRouter = Router();
 
 coursesRouter.get("/categories", listCategoriesController);
+coursesRouter.post("/admin/categories",authMiddleware,requireRole("ADMIN"),validate(createCategorySchema),
+  createCategoryController
+);
+coursesRouter.patch("/admin/categories/:id",authMiddleware,requireRole("ADMIN"),validate(updateCategorySchema),
+  updateCategoryController
+);
+coursesRouter.delete("/admin/categories/:id",authMiddleware,requireRole("ADMIN"),
+  deleteCategoryController
+);
 
 coursesRouter.get("/admin/courses",authMiddleware,requireRole("ADMIN"),validate(adminCoursesQuerySchema, "query"),
 listCoursesForAdminController
@@ -28,7 +39,7 @@ coursesRouter.patch("/admin/courses/:id/reject",authMiddleware,requireRole("ADMI
 );
 
 coursesRouter.get("/courses",validate(listCoursesQuerySchema, "query"),listCoursesController);
-coursesRouter.get("/courses/:id", getCourseByIdController);
+coursesRouter.get("/courses/:id", optionalAuthMiddleware, getCourseByIdController);
 coursesRouter.post("/courses",authMiddleware,requireRole("INSTRUCTOR"),validate(createCourseSchema),
   createCourseController
 );

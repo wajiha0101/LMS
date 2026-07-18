@@ -135,6 +135,30 @@ async function getInstructorPublicProfile(instructorId) {
   return sanitizeInstructorProfile(instructor);
 }
 
+async function getUserById(targetUserId, requestingUser) {
+  const isSelf = requestingUser.id === targetUserId;
+  const isAdmin = requestingUser.role === "ADMIN";
+
+  if (!isSelf && !isAdmin) {
+    throw AppError.Forbidden("You do not have permission to view this user");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    include: { instructorProfile: true },
+  });
+
+  if (!user) {
+    throw AppError.NotFound("User not found");
+  }
+
+  if (user.role === "INSTRUCTOR") {
+    return sanitizeInstructorProfile(user);
+  }
+
+  return sanitizeUser(user);
+}
+
 async function updateOwnInstructorProfile(userId, input) {
   const updatedProfile = await prisma.instructorProfile.upsert({
     where: { userId: userId },
@@ -159,5 +183,6 @@ module.exports = {
   suspendStudent,
   removeStudent,
   getInstructorPublicProfile,
+  getUserById,
   updateOwnInstructorProfile,
 };

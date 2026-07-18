@@ -8,6 +8,7 @@ const {
   suspendStudent,
   removeStudent,
   getInstructorPublicProfile,
+  getUserById,
   updateOwnInstructorProfile,
 } = require("./users.service");
 
@@ -83,6 +84,15 @@ async function getInstructorPublicProfileController(req, res, next) {
   }
 }
 
+async function getUserByIdController(req, res, next) {
+  try {
+    const user = await getUserById(req.params.id, req.user);
+    sendSuccess(res, user);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function updateOwnInstructorProfileController(req, res, next) {
   try {
     const instructor = await updateOwnInstructorProfile(req.user.id, req.body);
@@ -101,5 +111,6 @@ module.exports = {
   suspendStudentController,
   removeStudentController,
   getInstructorPublicProfileController,
+  getUserByIdController,
   updateOwnInstructorProfileController,
 };

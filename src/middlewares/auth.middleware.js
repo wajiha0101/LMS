@@ -30,4 +30,33 @@ function authMiddleware(req, _res, next) {
   }
 }
 
-module.exports = { authMiddleware };
+function optionalAuthMiddleware(req, _res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+
+  const token = header.slice("Bearer ".length);
+
+  try {
+    const payload = verifyAccessToken(token);
+
+    if (payload.status === "SUSPENDED") {
+      next(AppError.Forbidden("This account has been suspended"));
+      return;
+    }
+
+    req.user = {
+      id: payload.sub,
+      role: payload.role,
+      status: payload.status,
+    };
+    next();
+  } catch {
+    next();
+  }
+}
+
+module.exports = { authMiddleware, optionalAuthMiddleware };
