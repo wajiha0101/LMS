@@ -14,6 +14,8 @@ const reviewsRouter = require("./modules/reviews/reviews.routes");
 const certificatesRouter = require("./modules/certificates/certificates.routes");
 const payoutsRouter = require("./modules/payouts/payouts.routes");
 const cartRouter = require("./modules/cart/cart.routes");
+const paymentsRouter = require("./modules/payments/payments.routes");
+const { stripeWebhookHandler } = require("./modules/payments/payments.routes");
 
 const app = express();
 
@@ -24,6 +26,16 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+
+// Stripe webhook needs the raw body for signature verification —
+// must be registered BEFORE express.json() runs.
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
+
+app.use(express.json());
+app.use(cookieParser());
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -41,6 +53,7 @@ app.use("/", reviewsRouter);
 app.use("/", certificatesRouter);
 app.use("/", payoutsRouter);
 app.use("/", cartRouter);
+app.use("/", paymentsRouter);
 
 app.use((req, _res, next) => {
   console.log("UNMATCHED REQUEST:", req.method, req.originalUrl);
