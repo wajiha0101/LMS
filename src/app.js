@@ -16,6 +16,8 @@ const payoutsRouter = require("./modules/payouts/payouts.routes");
 const cartRouter = require("./modules/cart/cart.routes");
 const paymentsRouter = require("./modules/payments/payments.routes");
 const { stripeWebhookHandler } = require("./modules/payments/payments.routes");
+const enrollmentsRouter = require("./modules/enrollments/enrollments.routes");
+const progressRouter = require("./modules/progress/progress.routes");
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use("/", certificatesRouter);
 app.use("/", payoutsRouter);
 app.use("/", cartRouter);
 app.use("/", paymentsRouter);
+app.use("/", enrollmentsRouter);
+app.use("/", progressRouter);
 
 app.use((req, _res, next) => {
   console.log("UNMATCHED REQUEST:", req.method, req.originalUrl);
