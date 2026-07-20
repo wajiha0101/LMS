@@ -13,6 +13,7 @@ const assignmentsRouter = require("./modules/assignments/assignments.routes");
 const reviewsRouter = require("./modules/reviews/reviews.routes");
 const certificatesRouter = require("./modules/certificates/certificates.routes");
 const payoutsRouter = require("./modules/payouts/payouts.routes");
+const cartRouter = require("./modules/cart/cart.routes");
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/", assignmentsRouter);
 app.use("/", reviewsRouter);
 app.use("/", certificatesRouter);
 app.use("/", payoutsRouter);
+app.use("/", cartRouter);
 
 app.use((req, _res, next) => {
   console.log("UNMATCHED REQUEST:", req.method, req.originalUrl);
