@@ -18,7 +18,11 @@ const paymentsRouter = require("./modules/payments/payments.routes");
 const { stripeWebhookHandler } = require("./modules/payments/payments.routes");
 const enrollmentsRouter = require("./modules/enrollments/enrollments.routes");
 const progressRouter = require("./modules/progress/progress.routes");
-
+const wishlistRouter = require("./modules/wishlist/wishlist.routes");
+const notificationsRouter = require("./modules/notifications/notifications.routes");
+const forumRouter = require("./modules/forum/forum.routes");
+const announcementsRouter = require("./modules/announcements/announcements.routes");
+const analyticsRouter = require("./modules/analytics/analytics.routes");
 const app = express();
 
 app.use(helmet());
@@ -31,8 +35,6 @@ app.use(
 
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 
-// Stripe webhook needs the raw body for signature verification —
-// must be registered BEFORE express.json() runs.
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());
@@ -58,6 +60,11 @@ app.use("/", cartRouter);
 app.use("/", paymentsRouter);
 app.use("/", enrollmentsRouter);
 app.use("/", progressRouter);
+app.use("/", wishlistRouter);
+app.use("/", notificationsRouter);
+app.use("/", forumRouter);
+app.use("/", announcementsRouter);
+app.use("/", analyticsRouter);
 
 app.use((req, _res, next) => {
   console.log("UNMATCHED REQUEST:", req.method, req.originalUrl);

@@ -58,37 +58,52 @@ async function main() {
   });
 
   // --- Course ---
-  const course = await prisma.course.upsert({
-    where: { id: 'seed-course-1' },
-    update: {},
-    create: {
-      id: 'seed-course-1',
-      instructorId: instructor.id,
-      title: 'Full-Stack Web Development Bootcamp',
-      description: 'Learn Node.js, Express, and React from scratch.',
-      price: 49.99,
-      categoryId: category.id,
-      level: CourseLevel.BEGINNER,
-      status: CourseStatus.PUBLISHED,
-    },
+  // No hardcoded id: let Prisma generate a real UUID via @default(uuid()).
+  // Upsert on title instead, since title isn't @unique we simulate idempotency
+  // with findFirst + create instead of upsert (upsert requires a unique field).
+  let course = await prisma.course.findFirst({
+    where: { title: 'Full-Stack Web Development Bootcamp' },
   });
+
+  if (!course) {
+    course = await prisma.course.create({
+      data: {
+        instructorId: instructor.id,
+        title: 'Full-Stack Web Development Bootcamp',
+        description: 'Learn Node.js, Express, and React from scratch.',
+        price: 49.99,
+        categoryId: category.id,
+        level: CourseLevel.BEGINNER,
+        status: CourseStatus.PUBLISHED,
+      },
+    });
+  }
 
   // --- Materials (so Progress/Wishlist/Cart have something real to point at) ---
-  await prisma.material.upsert({
-    where: { id: 'seed-material-1' },
-    update: {},
-    create: {
-      id: 'seed-material-1',
-      courseId: course.id,
-      type: MaterialType.VIDEO,
-      title: 'Introduction to the Course',
-      contentUrl: 'https://example.com/video1.mp4',
-      position: 1,
-      duration: 600,
-    },
+  const existingMaterial = await prisma.material.findFirst({
+    where: { courseId: course.id, title: 'Introduction to the Course' },
   });
 
-  console.log('Seed complete:', { admin: admin.email, instructor: instructor.email, student: student.email, course: course.title });
+  if (!existingMaterial) {
+    await prisma.material.create({
+      data: {
+        courseId: course.id,
+        type: MaterialType.VIDEO,
+        title: 'Introduction to the Course',
+        contentUrl: 'https://example.com/video1.mp4',
+        position: 1,
+        duration: 600,
+      },
+    });
+  }
+
+  console.log('Seed complete:', {
+    admin: admin.email,
+    instructor: instructor.email,
+    student: student.email,
+    course: course.title,
+    courseId: course.id, // <-- use THIS real UUID in Postman, not "seed-course-1"
+  });
 }
 
 main()
