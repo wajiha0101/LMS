@@ -1,84 +1,54 @@
 const { sendSuccess } = require("../../utils/ApiResponse");
 const {
-  listInstructors,
-  approveInstructor,
-  rejectInstructor,
-  removeInstructor,
-  listStudents,
-  suspendStudent,
-  removeStudent,
-  getInstructorPublicProfile,
+  listUsers,
+  approveUser,
+  rejectUser,
+  removeUser,
+  getOwnProfile,
   getUserById,
-  updateOwnInstructorProfile,
+  updateOwnProfile,
 } = require("./users.service");
 
-async function listInstructorsController(_req, res, next) {
+async function listUsersController(req, res, next) {
   try {
-    const instructors = await listInstructors();
-    sendSuccess(res, instructors);
+    const users = await listUsers(req.query);
+    sendSuccess(res, users);
   } catch (error) {
     next(error);
   }
 }
 
-async function approveInstructorController(req, res, next) {
+async function approveUserController(req, res, next) {
   try {
-    const instructor = await approveInstructor(req.params.id);
-    sendSuccess(res, instructor);
+    const user = await approveUser(req.params.id);
+    sendSuccess(res, user);
   } catch (error) {
     next(error);
   }
 }
 
-async function rejectInstructorController(req, res, next) {
+async function rejectUserController(req, res, next) {
   try {
-    const instructor = await rejectInstructor(req.params.id);
-    sendSuccess(res, instructor);
+    const user = await rejectUser(req.params.id);
+    sendSuccess(res, user);
   } catch (error) {
     next(error);
   }
 }
 
-async function removeInstructorController(req, res, next) {
+async function removeUserController(req, res, next) {
   try {
-    const instructor = await removeInstructor(req.params.id);
-    sendSuccess(res, instructor);
+    const user = await removeUser(req.params.id);
+    sendSuccess(res, user);
   } catch (error) {
     next(error);
   }
 }
 
-async function listStudentsController(_req, res, next) {
+async function getOwnProfileController(req, res, next) {
   try {
-    const students = await listStudents();
-    sendSuccess(res, students);
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function suspendStudentController(req, res, next) {
-  try {
-    const student = await suspendStudent(req.params.id);
-    sendSuccess(res, student);
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function removeStudentController(req, res, next) {
-  try {
-    const student = await removeStudent(req.params.id);
-    sendSuccess(res, student);
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function getInstructorPublicProfileController(req, res, next) {
-  try {
-    const instructor = await getInstructorPublicProfile(req.params.id);
-    sendSuccess(res, instructor);
+    const user = await getOwnProfile(req.user.id, req.user);
+    sendSuccess(res, user);
   } catch (error) {
     next(error);
   }
@@ -93,24 +63,21 @@ async function getUserByIdController(req, res, next) {
   }
 }
 
-async function updateOwnInstructorProfileController(req, res, next) {
+async function updateOwnProfileController(req, res, next) {
   try {
-    const instructor = await updateOwnInstructorProfile(req.user.id, req.body);
-    sendSuccess(res, instructor);
+    const user = await updateOwnProfile(req.user.id, req.user.role, req.body);
+    sendSuccess(res, user);
   } catch (error) {
     next(error);
   }
 }
 
 module.exports = {
-  listInstructorsController,
-  approveInstructorController,
-  rejectInstructorController,
-  removeInstructorController,
-  listStudentsController,
-  suspendStudentController,
-  removeStudentController,
-  getInstructorPublicProfileController,
+  listUsersController,
+  approveUserController,
+  rejectUserController,
+  removeUserController,
+  getOwnProfileController,
   getUserByIdController,
-  updateOwnInstructorProfileController,
+  updateOwnProfileController,
 };
