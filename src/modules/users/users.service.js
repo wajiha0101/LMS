@@ -15,124 +15,103 @@ function sanitizeUser(user) {
 
 function sanitizeInstructorProfile(user) {
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-    avatarUrl: user.avatarUrl,
-    createdAt: user.createdAt,
+    ...sanitizeUser(user),
     bio: user.instructorProfile?.bio ?? null,
     expertise: user.instructorProfile?.expertise ?? null,
     credentials: user.instructorProfile?.credentials ?? null,
   };
 }
 
-async function listInstructors() {
-  const instructors = await prisma.user.findMany({
-    where: { role: "INSTRUCTOR" },
+function sanitizeUserByRole(user) {
+  return user.role === "INSTRUCTOR" ? sanitizeInstructorProfile(user) : sanitizeUser(user);
+}
+
+function sanitizeOwnProfile(user) {
+  const sanitizedUser = sanitizeUser(user);
+
+  if (user.role !== "INSTRUCTOR") {
+    return sanitizedUser;
+  }
+
+  return {
+    ...sanitizedUser,
+    instructorProfile: {
+      bio: user.instructorProfile?.bio ?? null,
+      expertise: user.instructorProfile?.expertise ?? null,
+      credentials: user.instructorProfile?.credentials ?? null,
+    },
+  };
+}
+
+async function listUsers(query) {
+  const where = {};
+
+  if (query.role) {
+    where.role = query.role;
+  }
+
+  if (query.status) {
+    where.status = query.status;
+  }
+
+  const users = await prisma.user.findMany({
+    where,
     include: { instructorProfile: true },
     orderBy: { createdAt: "desc" },
   });
 
-  return instructors.map(sanitizeInstructorProfile);
+  return users.map(sanitizeUserByRole);
 }
 
-async function approveInstructor(instructorId) {
-  const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
+async function getUserOrFail(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  if (!instructor || instructor.role !== "INSTRUCTOR") {
-    throw AppError.NotFound("Instructor not found");
+  if (!user) {
+    throw AppError.NotFound("User not found");
   }
 
-  const updatedInstructor = await prisma.user.update({
-    where: { id: instructorId },
+  return user;
+}
+
+function ensurePendingInstructor(user) {
+  if (user.role !== "INSTRUCTOR" || user.status !== "PENDING") {
+    throw AppError.Conflict("User must be a pending instructor");
+  }
+}
+
+async function approveUser(userId) {
+  const user = await getUserOrFail(userId);
+  ensurePendingInstructor(user);
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
     data: { status: "ACTIVE" },
   });
 
-  return sanitizeUser(updatedInstructor);
+  return sanitizeUser(updatedUser);
 }
 
-async function rejectInstructor(instructorId) {
-  const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
+async function rejectUser(userId) {
+  const user = await getUserOrFail(userId);
+  ensurePendingInstructor(user);
 
-  if (!instructor || instructor.role !== "INSTRUCTOR") {
-    throw AppError.NotFound("Instructor not found");
-  }
-
-  const updatedInstructor = await prisma.user.update({
-    where: { id: instructorId },
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
     data: { status: "REJECTED" },
   });
 
-  return sanitizeUser(updatedInstructor);
+  return sanitizeUser(updatedUser);
 }
 
-async function removeInstructor(instructorId) {
-  const instructor = await prisma.user.findUnique({ where: { id: instructorId } });
+async function removeUser(userId) {
+  await getUserOrFail(userId);
 
-  if (!instructor || instructor.role !== "INSTRUCTOR") {
-    throw AppError.NotFound("Instructor not found");
-  }
-
-  const updatedInstructor = await prisma.user.update({
-    where: { id: instructorId },
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
     data: { status: "SUSPENDED" },
   });
 
-  return sanitizeUser(updatedInstructor);
-}
-
-async function listStudents() {
-  const students = await prisma.user.findMany({
-    where: { role: "STUDENT" },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return students.map(sanitizeUser);
-}
-
-async function suspendStudent(studentId) {
-  const student = await prisma.user.findUnique({ where: { id: studentId } });
-
-  if (!student || student.role !== "STUDENT") {
-    throw AppError.NotFound("Student not found");
-  }
-
-  const updatedStudent = await prisma.user.update({
-    where: { id: studentId },
-    data: { status: "SUSPENDED" },
-  });
-
-  return sanitizeUser(updatedStudent);
-}
-
-async function removeStudent(studentId) {
-  const student = await prisma.user.findUnique({ where: { id: studentId } });
-
-  if (!student || student.role !== "STUDENT") {
-    throw AppError.NotFound("Student not found");
-  }
-
-  const updatedStudent = await prisma.user.update({
-    where: { id: studentId },
-    data: { status: "SUSPENDED" },
-  });
-
-  return sanitizeUser(updatedStudent);
-}
-
-async function getInstructorPublicProfile(instructorId) {
-  const instructor = await prisma.user.findUnique({
-    where: { id: instructorId },
-    include: { instructorProfile: true },
-  });
-
-  if (!instructor || instructor.role !== "INSTRUCTOR") {
-    throw AppError.NotFound("Instructor not found");
-  }
-
-  return sanitizeInstructorProfile(instructor);
+  return sanitizeUser(updatedUser);
 }
 
 async function getUserById(targetUserId, requestingUser) {
@@ -152,37 +131,65 @@ async function getUserById(targetUserId, requestingUser) {
     throw AppError.NotFound("User not found");
   }
 
-  if (user.role === "INSTRUCTOR") {
-    return sanitizeInstructorProfile(user);
-  }
-
-  return sanitizeUser(user);
+  return sanitizeUserByRole(user);
 }
 
-async function updateOwnInstructorProfile(userId, input) {
-  const updatedProfile = await prisma.instructorProfile.upsert({
-    where: { userId: userId },
-    update: input,
-    create: { userId: userId, ...input },
-  });
-
-  const instructor = await prisma.user.findUnique({
+async function getOwnProfile(userId, requestingUser) {
+  const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { instructorProfile: true },
   });
 
-  return sanitizeInstructorProfile(instructor);
+  if (!user) {
+    throw AppError.NotFound("User not found");
+  }
+
+  if (requestingUser.id !== userId) {
+    throw AppError.Forbidden("You do not have permission to view this user");
+  }
+
+  return sanitizeOwnProfile(user);
+}
+
+async function updateOwnProfile(userId, role, input) {
+  if (role === "INSTRUCTOR") {
+    const profileInput = {
+      bio: input.bio,
+      expertise: input.expertise,
+      credentials: input.credentials,
+    };
+
+    await prisma.instructorProfile.upsert({
+      where: { userId },
+      update: profileInput,
+      create: { userId, ...profileInput },
+    });
+  } else {
+    const userInput = {
+      name: input.name,
+      avatarUrl: input.avatarUrl,
+    };
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: userInput,
+    });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { instructorProfile: true },
+  });
+
+  return sanitizeOwnProfile(user);
 }
 
 module.exports = {
-  listInstructors,
-  approveInstructor,
-  rejectInstructor,
-  removeInstructor,
-  listStudents,
-  suspendStudent,
-  removeStudent,
-  getInstructorPublicProfile,
+  listUsers,
+  approveUser,
+  rejectUser,
+  removeUser,
   getUserById,
-  updateOwnInstructorProfile,
+  getOwnProfile,
+  updateOwnProfile,
 };

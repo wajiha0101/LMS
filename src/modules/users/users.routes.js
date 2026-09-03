@@ -2,45 +2,51 @@ const { Router } = require("express");
 const { authMiddleware } = require("../../middlewares/auth.middleware");
 const { requireRole } = require("../../middlewares/rbac.middleware");
 const { validate } = require("../../middlewares/validate.middleware");
-const { updateProfileSchema } = require("./users.schema");
-const {listInstructorsController,approveInstructorController,rejectInstructorController,removeInstructorController,
-  listStudentsController,
-  suspendStudentController,
-  removeStudentController,
-  getInstructorPublicProfileController,
+const { listUsersQuerySchema, updateProfileSchema } = require("./users.schema");
+const {
+  listUsersController,
+  approveUserController,
+  rejectUserController,
+  removeUserController,
+  getOwnProfileController,
   getUserByIdController,
-  updateOwnInstructorProfileController,
+  updateOwnProfileController,
 } = require("./users.controller");
 
-const adminUsersRouter = Router();
+const usersRouter = Router();
 
-adminUsersRouter.get("/admin/instructors",authMiddleware,requireRole("ADMIN"),
-listInstructorsController
+usersRouter.get(
+  "/users",
+  authMiddleware,
+  requireRole("ADMIN"),
+  validate(listUsersQuerySchema, "query"),
+  listUsersController
 );
-adminUsersRouter.patch("/admin/instructors/:id/approve",authMiddleware,requireRole("ADMIN"),
-  approveInstructorController
+usersRouter.patch(
+  "/users/:id/approve",
+  authMiddleware,
+  requireRole("ADMIN"),
+  approveUserController
 );
-adminUsersRouter.patch("/admin/instructors/:id/reject",authMiddleware,requireRole("ADMIN"),
-rejectInstructorController
+usersRouter.patch(
+  "/users/:id/reject",
+  authMiddleware,
+  requireRole("ADMIN"),
+  rejectUserController
 );
-adminUsersRouter.delete("/admin/instructors/:id",authMiddleware,requireRole("ADMIN"),
-  removeInstructorController
+usersRouter.delete(
+  "/users/:id",
+  authMiddleware,
+  requireRole("ADMIN"),
+  removeUserController
 );
-adminUsersRouter.get("/admin/students",authMiddleware,requireRole("ADMIN"),
-  listStudentsController
-);
-adminUsersRouter.patch("/admin/students/:id/suspend",authMiddleware,requireRole("ADMIN"),
-  suspendStudentController
-);
-adminUsersRouter.delete("/admin/students/:id",authMiddleware,requireRole("ADMIN"),
-  removeStudentController
-);
-
-adminUsersRouter.get("/instructors/:id", getInstructorPublicProfileController);
-adminUsersRouter.get("/users/:id", authMiddleware, getUserByIdController);
-adminUsersRouter.patch("/instructors/me/profile",authMiddleware,requireRole("INSTRUCTOR"),
+usersRouter.get("/users/me/profile", authMiddleware, getOwnProfileController);
+usersRouter.patch(
+  "/users/me/profile",
+  authMiddleware,
   validate(updateProfileSchema),
-  updateOwnInstructorProfileController
+  updateOwnProfileController
 );
+usersRouter.get("/users/:id", authMiddleware, getUserByIdController);
 
-module.exports = adminUsersRouter;
+module.exports = usersRouter;
